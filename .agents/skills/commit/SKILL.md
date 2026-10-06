@@ -1,214 +1,208 @@
 ---
 name: commit
 description: >-
-  Gunakan skill ini setiap kali pengguna ingin membuat git commit, baik judul
-  maupun deskripsi/body lengkap. Skill ini membaca git diff --staged (dan
-  unstaged jika belum di-stage), menganalisis seluruh perubahan, lalu
-  menghasilkan: (1) judul commit singkat ber-prefix Conventional Commits,
-  (2) body PR-style dalam Bahasa Indonesia yang mencakup Ringkasan Perubahan,
-  detail teknis per section, Cara Pengetesan, daftar Berkas yang Diperbarui,
-  dan status Pengujian. Aktifkan juga ketika pengguna menyebut "/commit",
-  "buatkan commit", "commit desc", "commit message", atau "commit description".
+  Use this skill whenever the user wants to create a git commit — title and/or
+  full body description. It reads git diff --staged (or unstaged if nothing is
+  staged), analyzes all changes, and produces: (1) a short Conventional Commits
+  title, (2) a PR-style body in Bahasa Indonesia covering Ringkasan Perubahan,
+  per-domain technical details, Cara Pengetesan, Berkas yang Diperbarui, and
+  Pengujian status. Also activate when the user says "/commit", "buatkan commit",
+  "commit desc", "commit message", or "commit description".
 ---
 
 # Commit Skill
 
-Skill ini mengotomasi seluruh alur pembuatan git commit — dari analisis diff
-hingga pesan commit final siap pakai — tanpa memerlukan input manual dari
-pengguna selain memilih scope/konteks jika ambigu.
+Automates the full git commit authoring workflow — from diff analysis to a
+final commit message — with no manual input required beyond scope clarification
+if the diff is ambiguous.
 
 ---
 
-## Alur Kerja (Wajib Diikuti Berurutan)
+## Workflow (Follow in Order)
 
-### Langkah 1 — Kumpulkan Konteks
+### Step 1 — Collect Context
 
-Jalankan perintah berikut secara berurutan. Berhenti di step pertama yang
-menghasilkan output bermakna:
+Run the following commands in sequence. Stop at the first one that returns
+meaningful output:
 
 ```bash
-# 1a. Diff staged (prioritas utama)
+# 1a. Staged diff (primary)
 git diff --staged --stat
 git diff --staged
 
-# 1b. Jika staged kosong, ambil unstaged
+# 1b. If staged is empty, fall back to unstaged
 git diff --stat
 git diff
 
-# 1c. Metadata tambahan
-git log --oneline -10          # gaya commit historis di repo ini
-git status --short             # berkas baru / deleted / renamed
-git branch --show-current      # nama branch aktif
+# 1c. Additional metadata
+git log --oneline -10          # historical commit style in this repo
+git status --short             # new / deleted / renamed files
+git branch --show-current      # active branch name
 ```
 
-Baca output sepenuhnya. Jangan lewati atau truncate diff.
+Read the full output. Do not skip or truncate the diff.
 
 ---
 
-### Langkah 2 — Analisis Perubahan
+### Step 2 — Analyze Changes
 
-Kelompokkan perubahan berdasarkan **domain fungsional** (bukan berdasarkan
-direktori semata). Tiap kelompok akan menjadi satu section di body commit.
+Group changes by **functional domain**, not by directory structure. Each group
+becomes one `###` section in the commit body.
 
-Pertanyaan panduan:
-- Apa yang **berubah secara perilaku** (bukan hanya teks)?
-- Adakah perubahan yang **breaking** atau **deprecating**?
-- Adakah perubahan pada **skema database / migrasi**?
-- Apa **side-effect** yang perlu diuji?
+Guiding questions:
+- What changed **behaviorally** (not just textually)?
+- Are any changes **breaking** or **deprecating** something?
+- Are there **database schema / migration** changes?
+- What **side-effects** need to be tested?
 
 ---
 
-### Langkah 3 — Tentukan Judul Commit
+### Step 3 — Determine the Commit Title
 
-Format wajib (Conventional Commits):
+Required format (Conventional Commits):
 
 ```
-<type>(<scope>): <deskripsi singkat maks 72 karakter>
+<type>(<scope>): <short description, max 72 chars>
 ```
 
-**Tabel tipe yang diizinkan:**
+**Allowed types:**
 
-| Tipe       | Kapan Dipakai                                                  |
+| Type       | When to Use                                                    |
 |------------|----------------------------------------------------------------|
-| `feat`     | Fitur baru yang terlihat pengguna                              |
-| `fix`      | Perbaikan bug                                                  |
-| `refactor` | Refaktor tanpa perubahan perilaku                              |
-| `perf`     | Optimasi performa                                              |
-| `style`    | Formatting, whitespace, tidak ada logika baru                  |
-| `test`     | Penambahan / perubahan unit test atau integration test         |
-| `docs`     | Dokumentasi saja                                               |
-| `chore`    | Konfigurasi, tooling, CI/CD, dependency                        |
-| `build`    | Perubahan sistem build atau dependencies eksternal             |
-| `ci`       | Perubahan pipeline CI/CD                                       |
-| `revert`   | Mengembalikan commit sebelumnya                                |
+| `feat`     | New user-facing feature                                        |
+| `fix`      | Bug fix                                                        |
+| `refactor` | Restructuring without behavior change                          |
+| `perf`     | Performance improvement                                        |
+| `style`    | Formatting, whitespace — no logic change                       |
+| `test`     | Adding or updating unit / integration tests                    |
+| `docs`     | Documentation only                                             |
+| `chore`    | Configuration, tooling, CI/CD, dependency updates              |
+| `build`    | Build system or external dependency changes                    |
+| `ci`       | CI/CD pipeline changes                                         |
+| `revert`   | Reverts a previous commit                                      |
 
-**Aturan scope:**
-- Gunakan nama modul / fitur yang diubah (contoh: `ticket-it`, `kartu-stok`,
-  `central-stock`, `auth`).
-- Jika perubahan lintas > 3 modul berbeda, gunakan scope `core` atau hilangkan
-  scope.
-- Jika > 1 tipe dominan, pilih tipe yang paling tinggi nilai bisnis-nya
-  (urutan: `feat` > `fix` > `refactor` > sisanya).
+**Scope rules:**
+- Use the module or feature name being changed (e.g., `ticket-it`,
+  `kartu-stok`, `central-stock`, `auth`).
+- If changes span > 3 unrelated modules, use `core` or omit the scope.
+- When multiple types apply, pick the highest business-value type:
+  `feat` > `fix` > `refactor` > everything else.
 
-**Judul TIDAK boleh:**
-- Diakhiri tanda titik.
-- Mengandung kata "Update", "Change", "Modify" tanpa konteks spesifik.
-- Melebihi 72 karakter.
+**Title must NOT:**
+- End with a period.
+- Use vague verbs like "update", "change", or "modify" without specific context.
+- Exceed 72 characters.
 
 ---
 
-### Langkah 4 — Buat Body Commit (PR-Style)
+### Step 4 — Build the Commit Body (PR-Style)
 
-Gunakan template di bawah. Isi setiap section berdasarkan hasil analisis.
-Hapus section yang benar-benar tidak relevan (jangan kosongkan, hapus saja).
+Use the template below. Fill each section based on the analysis. Remove any
+section that is entirely irrelevant — do not leave it empty.
 
 ```markdown
 ## Ringkasan Perubahan
 
-<satu paragraf 3–6 kalimat yang menjelaskan MENGAPA perubahan ini dibuat
-dan dampak bisnis / teknis utamanya. Hindari menjelaskan ulang isi
-section berikutnya.>
+<one paragraph, 3–6 sentences explaining WHY this change was made and its
+primary business/technical impact. Do not repeat what the ### sections cover.>
 
 ---
 
-### <Nomor>. <Nama Domain/Fitur> (<berkas utama>)
+### <Number>. <Domain/Feature Name> (<main files>)
 
-• **<Komponen/Class/Method>**: <penjelasan perubahan dan alasan teknis>.
-• **<Komponen>**: <penjelasan>.
-[ulangi per komponen yang berubah dalam domain ini]
+• **<Component/Class/Method>**: <explanation of change and technical reason>.
+• **<Component>**: <explanation>.
+[repeat per changed component within this domain]
 
-[ulangi section ### untuk setiap domain fungsional]
+[repeat ### section for each functional domain]
 
 ---
 
 ## Cara Pengetesan
 
-<nomor urut langkah pengujian manual yang cukup detail untuk direview oleh
-orang lain tanpa membaca kode. Sebutkan URL, menu, atau CLI command jika
-relevan.>
+<numbered steps for manual testing, detailed enough for a reviewer who has not
+read the code. Include URLs, menu paths, or CLI commands where relevant.>
 
 ---
 
-## Berkas yang Diperbarui (<jumlah> Berkas)
+## Berkas yang Diperbarui (<count> Berkas)
 
-<daftar bullet berisi path berkas relatif dari root repo, diurutkan
-alfabet per direktori>
+<bullet list of file paths relative to repo root, sorted alphabetically by
+directory>
 
 ---
 
 ## Pengujian (Testing Done)
 
-[✓] <jenis test>: <ringkasan hasil>
-[✗] <jenis test yang belum dilakukan> — <alasan / TODO>
+[✓] <test type>: <result summary>
+[✗] <test not yet run> — <reason / TODO>
 ```
 
 ---
 
-### Langkah 5 — Tambahkan Trailer
+### Step 5 — Add Trailers
 
-Selalu sertakan trailer berikut di **akhir body**, dipisah satu baris kosong
-dari konten terakhir:
+Always append the following trailer at the **end of the body**, separated by
+one blank line from the last content line:
 
 ```
 Co-Authored-By: Google Antigravity <antigravity@google.com>
 ```
 
-Jika ada co-author manusia lain yang teridentifikasi dari `git log`, tambahkan
-juga:
+If additional human co-authors are identified from `git log`, add them too:
 
 ```
-Co-Authored-By: Nama Lengkap <email@domain.com>
+Co-Authored-By: Full Name <email@domain.com>
 ```
 
 ---
 
-### Langkah 6 — Commit atau Preview
+### Step 6 — Preview then Commit
 
-**Default: preview mode — tampilkan pesan dulu, jangan langsung commit.**
+**Default: preview mode — output the message first, do not commit immediately.**
 
-Output pesan lengkap (judul + body + trailer) secara langsung ke chat tanpa
-pembungkus atau anotasi tambahan. Pengguna bisa membaca, menyalin, atau
-meminta perubahan sebelum lanjut.
+Output the full message (title + body + trailers) directly into chat with no
+wrapper or extra annotation. The user can read, copy, or request edits before
+proceeding.
 
-Setelah output ditampilkan, tawarkan tiga opsi:
-1. Langsung `git commit` menggunakan pesan tersebut.
-2. Edit bagian tertentu yang diminta pengguna.
-3. Simpan ke file `.commit-msg` di root repo.
+After displaying the preview, offer three options:
+1. Run `git commit` immediately using that message.
+2. Edit a specific section the user requests.
+3. Save to `.commit-msg` at the repo root.
 
-Jika pengguna mengonfirmasi commit, tulis dulu pesan ke `.commit-msg`
-menggunakan `write_to_file`, jalankan `git commit -F .commit-msg`, lalu
-hapus file `.commit-msg`.
+If the user confirms the commit, write the message to `.commit-msg` using
+`write_to_file`, run `git commit -F .commit-msg`, then delete `.commit-msg`.
 
 ---
 
-## Aturan Tambahan
+## Additional Rules
 
-### Bahasa
-- **Judul**: Bahasa Inggris (Conventional Commits standar internasional).
-- **Body**: Bahasa Indonesia, kecuali nama teknis (class, method, variabel,
-  path file) tetap dalam bahasa aslinya.
+### Language
+- **Title**: English (Conventional Commits is an international standard).
+- **Body**: Bahasa Indonesia. Technical names (class, method, variable, file
+  path) remain in their original form.
 
-### Panjang & Kepadatan
-- Judul: maks 72 karakter.
-- Setiap bullet point body: maks 2 baris wrapped di 100 karakter.
-- Section `Ringkasan Perubahan`: 3–6 kalimat, bukan poin-poin.
+### Length & Density
+- Title: max 72 characters.
+- Each body bullet: max 2 lines wrapped at 100 characters.
+- `Ringkasan Perubahan` section: 3–6 sentences, not bullet points.
 
-### Kualitas Informasi
-- Sebutkan **nama konkret**: nama method, nama class, nama route, nama kolom
-  database — bukan "beberapa fungsi" atau "beberapa komponen".
-- Untuk setiap perubahan teknis, sertakan **mengapa** bukan hanya **apa**.
-- Hindari kata-kata filler: "berhasil", "dengan baik", "sudah", "telah",
+### Information Quality
+- Use **concrete names**: method names, class names, routes, column names —
+  never "some functions" or "several components".
+- For each technical change, explain **why**, not just **what**.
+- Avoid filler words in the body: "berhasil", "dengan baik", "sudah", "telah",
   "sekarang".
 
 ### Multi-Commit (Squash Candidates)
-Jika diff sangat besar (> 500 baris) dan mencakup domain yang benar-benar
-terpisah (contoh: migrasi database + fitur UI + hotfix auth), rekomendasikan
-split commit. Tampilkan rencana split sebelum membuat pesan masing-masing.
+If the diff exceeds 500 lines AND spans truly independent domains (e.g.,
+database migration + new UI feature + auth hotfix), recommend splitting into
+separate commits. Present a split plan before drafting each message.
 
 ---
 
-## Referensi Internal
+## Internal References
 
-- [Contoh Output Commit Lengkap](./examples/full-commit-example.md)
+- [Full Commit Output Example](./examples/full-commit-example.md)
 - [Conventional Commits Cheatsheet](./references/conventional-commits.md)
-- [Panduan Scope & Tipe](./references/scope-guide.md)
+- [Scope & Type Decision Guide](./references/scope-guide.md)
