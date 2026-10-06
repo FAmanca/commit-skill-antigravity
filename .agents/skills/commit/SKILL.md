@@ -203,6 +203,5 @@ separate commits. Present a split plan before drafting each message.
 
 ## Internal References
 
-- [Full Commit Output Example](./examples/full-commit-example.md)
 - [Conventional Commits Cheatsheet](./references/conventional-commits.md)
 - [Scope & Type Decision Guide](./references/scope-guide.md)
