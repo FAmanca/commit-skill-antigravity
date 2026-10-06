@@ -200,8 +200,3 @@ database migration + new UI feature + auth hotfix), recommend splitting into
 separate commits. Present a split plan before drafting each message.
 
 ---
-
-## Internal References
-
-- [Conventional Commits Cheatsheet](./references/conventional-commits.md)
-- [Scope & Type Decision Guide](./references/scope-guide.md)
