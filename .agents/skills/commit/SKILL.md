@@ -164,33 +164,20 @@ Co-Authored-By: Nama Lengkap <email@domain.com>
 
 ### Langkah 6 — Commit atau Preview
 
-**Default: tampilkan dulu (preview mode).**
+**Default: preview mode — tampilkan pesan dulu, jangan langsung commit.**
 
-Tampilkan hasil akhir dalam format yang bisa langsung dicopy-paste ke terminal:
+Output pesan lengkap (judul + body + trailer) secara langsung ke chat tanpa
+pembungkus atau anotasi tambahan. Pengguna bisa membaca, menyalin, atau
+meminta perubahan sebelum lanjut.
 
-````
-```
-<judul commit>
-
-<body commit>
-
-Co-Authored-By: Google Antigravity <antigravity@google.com>
-```
-````
-
-Setelah menampilkan preview, tanya apakah pengguna ingin:
+Setelah output ditampilkan, tawarkan tiga opsi:
 1. Langsung `git commit` menggunakan pesan tersebut.
-2. Edit bagian tertentu.
+2. Edit bagian tertentu yang diminta pengguna.
 3. Simpan ke file `.commit-msg` di root repo.
 
-Jika pengguna mengonfirmasi commit, jalankan:
-
-```bash
-git commit -F .commit-msg
-```
-
-(tulis dulu pesan ke `.commit-msg` menggunakan `write_to_file`, lalu commit,
-lalu hapus file `.commit-msg`.)
+Jika pengguna mengonfirmasi commit, tulis dulu pesan ke `.commit-msg`
+menggunakan `write_to_file`, jalankan `git commit -F .commit-msg`, lalu
+hapus file `.commit-msg`.
 
 ---
 
