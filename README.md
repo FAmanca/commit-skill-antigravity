@@ -1,13 +1,15 @@
 # Antigravity Git Workspace Skills
 
-Specialized agent skills for automated Git commit authoring, branch management, and remote publishing within the Google Antigravity ecosystem.
+Specialized agent skills for automated Git commit authoring, dual-format commit drafting, branch management, and remote publishing within the Google Antigravity ecosystem.
 
 ---
 
 ## Available Skills
 
 ### 1. `commit` (`.agents/skills/commit/`)
-Generates Conventional Commits titles (English) and PR-style commit bodies (in Bahasa Indonesia or English) from staged or unstaged diffs, previews the message, and executes local `git commit`.
+The primary unified commit skill featuring **intelligent dual-mode selection**:
+- **Mode 1: Repo Fork / Branch Pribadi (Default)**: Generates concise, bullet-point commit messages for everyday feature branch development.
+- **Mode 2: Repo Utama / Upstream PR**: Activates only when explicitly requested for upstream PRs, generating comprehensive PR-style commit descriptions.
 
 **Triggers**:
 - `/commit`
@@ -16,13 +18,38 @@ Generates Conventional Commits titles (English) and PR-style commit bodies (in B
 - `create commit`
 - `buatkan commit`
 
-### 2. `commit-push` (`.agents/skills/commit-push/`)
-Automates the full delivery flow:
-1. Enforces switching to a semantic feature branch via `git switch -c <type>/<description>`. Direct commits to `main`/`master` are disallowed.
-2. Analyzes diffs and drafts a Conventional Commit title with a PR-style body in Bahasa Indonesia or English.
+---
+
+### 2. `commit-branch` (`.agents/skills/commit-branch/`)
+Dedicated skill for everyday commits on personal fork or feature branches. Strictly enforces local exploration (never inspects upstream) and outputs clean Conventional Commit titles with concise bullet points.
+
+**Triggers**:
+- `/commit-branch`
+- `commit branch`
+- `commit-fitur`
+- `commit lokal`
+
+---
+
+### 3. `commit-pr` (`.agents/skills/commit-pr/`)
+Dedicated skill for Pull Requests to the upstream/main repository. Generates a deep, structured PR description (Summary of Changes, technical breakdown per domain, Testing Instructions, Modified Files, and Test Verification). Enforces raw Markdown rendering in chat UI.
+
+**Triggers**:
+- `/commit-pr`
+- `commit pr`
+- `/commit-repo`
+- `commit repo`
+- `commit upstream`
+
+---
+
+### 4. `commit-push` (`.agents/skills/commit-push/`)
+Automates the full end-to-end delivery lifecycle:
+1. Enforces switching to a semantic feature branch via `git switch -c <type>/<description>`. Direct commits or pushes to primary branches (`main`, `master`, `develop`) are forbidden.
+2. Analyzes staged/unstaged diffs and drafts a Conventional Commit title with a PR-style body (Bahasa Indonesia or English).
 3. Attaches the `Assisted-By: Google Antigravity` trailer.
 4. Stages changes and commits via `git commit -F .commit-msg`.
-5. Pushes the branch to remote via `git push -u origin <branch>` and outputs the PR creation URL.
+5. Pushes to remote via `git push -u origin <branch>` and outputs the PR creation URL.
 
 **Triggers**:
 - `/commit-push`
@@ -32,106 +59,121 @@ Automates the full delivery flow:
 
 ---
 
-## Language Rules
+## 2 Format Standar Commit
 
-- **Commit Title**: Always English following Conventional Commits (`<type>(<scope>): <subject>`).
-- **Commit Body**: Supports both **Bahasa Indonesia** (default when prompt or repo history is in Indonesian) and **English** (when prompt or repo history is in English).
-- **Technical identifiers**: Class names, method names, variables, and file paths remain intact in their original code syntax.
+### 🟢 Format 1: Repo Fork / Branch Pribadi (Poin-Poin Sederhana)
+Digunakan secara default oleh `/commit-branch` dan `/commit` untuk pengerjaan harian:
+
+```text
+<type>(<scope>): <deskripsi singkat>
+
+- <poin perubahan ringkas 1>
+- <poin perubahan ringkas 2>
+- <poin perubahan ringkas 3>
+
+Assisted-By: Google Antigravity
+```
 
 ---
 
-## Branch Naming Standard (`commit-push`)
+### 🔵 Format 2: Repo Utama / Upstream PR (PR-Style Komprehensif)
+Digunakan oleh `/commit-pr` dan `/commit` (jika diminta eksplisit untuk PR upstream).
 
-All branches created by the `commit-push` skill follow semantic convention:
-
-```
-<type>/<kebab-case-description>
-```
-
-Examples:
-- `feat/jwt-authentication`
-- `fix/table-pagination-overflow`
-- `refactor/clean-architecture-storage`
-- `chore/update-dependencies`
-
----
-
-## Commit Structure
-
-### Conventional Commit Title (English)
-```
-<type>(<scope>): <short description, max 72 chars>
-```
-
-### Commit Body Option A: Bahasa Indonesia
+#### Opsi A: Bahasa Indonesia
 ```markdown
 ## Ringkasan Perubahan
-<Konteks perubahan dan dampak teknis/bisnis.>
+<Satu paragraf, 3–6 kalimat yang menjelaskan MENGAPA perubahan dilakukan, konteks arsitektur, dan dampak teknis/bisnisnya.>
 
 ---
 
-### 1. <Domain/Fitur> (<berkas>)
+### 1. <Nama Domain/Fitur> (<berkas utama>)
+• **<Komponen/Class/Fungsi>**: <penjelasan teknis dan alasan perubahan>.
 • **<Komponen>**: <penjelasan teknis dan alasan perubahan>.
 
 ---
 
 ## Cara Pengetesan
-<Langkah-langkah pengujian bernomor.>
+<Langkah-langkah bernomor untuk reproduksi atau pengujian manual/otomatis.>
 
 ---
 
 ## Berkas yang Diperbarui (<jumlah> Berkas)
-• <daftar path berkas>
+• <daftar path berkas relatif terhadap root>
 
 ---
 
 ## Pengujian (Testing Done)
-[✓] <pengujian selesai>: <ringkasan hasil>
-[✗] <pengujian tertunda>: <alasan>
+[✓] <jenis pengujian / verifikasi yang dijalankan>: <ringkasan hasil>
+[✗] <pengujian tertunda / belum dijalankan> — <alasan / pemblokir>
 
 Assisted-By: Google Antigravity
 ```
 
-### Commit Body Option B: English
+#### Opsi B: English
 ```markdown
 ## Summary of Changes
-<High-level context and behavioral impact.>
+<One paragraph, 3–6 sentences explaining WHY the changes were made, architectural context, and business/technical impact.>
 
 ---
 
-### 1. <Domain/Feature> (<files>)
-• **<Symbol/Component>**: <technical rationale and details>.
+### 1. <Domain/Feature Name> (<primary files>)
+• **<Component/Class/Function>**: <technical reason and nature of the change>.
+• **<Component>**: <technical reason and nature of the change>.
 
 ---
 
 ## Testing Instructions
-<Step-by-step verification instructions.>
+<Numbered steps for manual or automated reproduction and verification.>
 
 ---
 
 ## Modified Files (<count> Files)
-• <file paths>
+• <repo-relative file paths>
 
 ---
 
 ## Test Verification
-[✓] <completed test>: <summary>
-[✗] <pending verification>: <reason>
+[✓] <test suite / manual verification executed>: <summary of result>
+[✗] <pending verification> — <reason / blocker>
 
 Assisted-By: Google Antigravity
 ```
+
+---
+
+## Aturan Tampilan Chat UI (PR-Style)
+
+Saat menyajikan deskripsi PR di chat:
+- Tampilkan teks deskripsi PR **langsung sebagai teks Markdown rapi**.
+- **DILARANG KERAS** membungkus teks deskripsi PR ke dalam satu card/blok kode raksasa (` ``` `) yang memunculkan copy button bertingkat di UI antarmuka chat.
 
 ---
 
 ## Attribution Trailer Standards
 
-To avoid GitHub attributing commits to random third-party profiles (which happens when using `Co-Authored-By` with email addresses claimed by external accounts), this skill utilizes:
+Untuk mencegah GitHub menghubungkan commit ke profil pengguna pihak ketiga yang tidak diinginkan (yang kerap terjadi jika menggunakan `Co-Authored-By` dengan alamat email umum), seluruh skill ini menggunakan standar:
 
 ```
 Assisted-By: Google Antigravity
 ```
 
-This complies with Git trailer RFC specifications while keeping contributor graphs and commit insights clean on GitHub.
+Format ini mematuhi spesifikasi RFC Git trailer sekaligus menjaga kebersihan grafik kontributor dan commit insights di GitHub.
+
+---
+
+## Branch Naming Standard (`commit-push`)
+
+Cabang fitur yang dibuat secara otomatis oleh `commit-push` mematuhi konvensi semantik:
+
+```
+<type>/<kebab-case-description>
+```
+
+Contoh:
+- `feat/jwt-authentication`
+- `fix/table-pagination-overflow`
+- `refactor/clean-architecture-storage`
+- `chore/update-dependencies`
 
 ---
 
@@ -144,6 +186,10 @@ This complies with Git trailer RFC specifications while keeping contributor grap
     │   ├── SKILL.md
     │   └── scripts/
     │       └── gen-commit-msg.sh
+    ├── commit-branch/
+    │   └── SKILL.md
+    ├── commit-pr/
+    │   └── SKILL.md
     └── commit-push/
         ├── SKILL.md
         └── scripts/
@@ -155,12 +201,12 @@ This complies with Git trailer RFC specifications while keeping contributor grap
 ## Installation
 
 ### Project Level
-Keep the `.agents/` directory at the root of your target repository.
+Letakkan direktori `.agents/` pada root repositori proyek Anda.
 
-### Global Installation (All Projects)
-Copy the `skills/` contents to your global Antigravity config directory:
+### Global Installation (Semua Proyek)
+Salin seluruh folder skill ke direktori konfigurasi global Antigravity:
 
-- **Windows**:
+- **Windows (PowerShell)**:
   ```powershell
   Copy-Item -Recurse -Force .agents\skills\* "$HOME\.gemini\config\skills\"
   ```
@@ -171,6 +217,6 @@ Copy the `skills/` contents to your global Antigravity config directory:
 
 ---
 
-## License
+## Lisensi
 
 MIT
