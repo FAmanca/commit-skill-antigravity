@@ -1,202 +1,216 @@
 ---
 name: commit
 description: >-
-  Use this skill whenever the user wants to create a git commit — title and/or
-  full body description. It reads git diff --staged (or unstaged if nothing is
-  staged), analyzes all changes, and produces: (1) a short Conventional Commits
-  title, (2) a PR-style body in Bahasa Indonesia covering Ringkasan Perubahan,
-  per-domain technical details, Cara Pengetesan, Berkas yang Diperbarui, and
-  Pengujian status. Also activate when the user says "/commit", "buatkan commit",
-  "commit desc", "commit message", or "commit description".
+  Author and create git commits from git diffs. Supports two rules/modes: (1) `/commit-branch` (Default):
+  generates concise bullet-point commit messages for everyday personal/branch commits; (2) `/commit-pr`:
+  generates full structured PR-style bodies (Summary, domain breakdown, Testing Instructions, Modified
+  Files, Test Verification) for PR to the upstream/main repository. Applies the `Assisted-By: Google Antigravity`
+  trailer and executes the local commit upon confirmation. Triggers on "/commit", "commit message", "commit desc",
+  "create commit", "buatkan commit".
 ---
 
 # Commit Skill
 
-Automates the full git commit authoring workflow — from diff analysis to a
-final commit message — with no manual input required beyond scope clarification
-if the diff is ambiguous.
+Automates the git commit authoring workflow from diff analysis to local commit creation, supporting bilingual commit bodies (Bahasa Indonesia and English) and dual commit rules: `/commit-branch` (Repo Fork / Poin-Poin Ringkas) vs. `/commit-pr` (Repo Utama / PR-Style Panjang).
 
 ---
 
-## Workflow (Follow in Order)
+## Workflow
 
 ### Step 1 — Collect Context
 
-Run the following commands in sequence. Stop at the first one that returns
-meaningful output:
+Execute the following commands in sequence to inspect repository state:
 
 ```bash
-# 1a. Staged diff (primary)
+# 1a. Staged diff (primary source)
 git diff --staged --stat
 git diff --staged
 
-# 1b. If staged is empty, fall back to unstaged
+# 1b. Unstaged diff fallback (if staged is empty)
 git diff --stat
 git diff
 
-# 1c. Additional metadata
-git log --oneline -10          # historical commit style in this repo
-git status --short             # new / deleted / renamed files
-git branch --show-current      # active branch name
+# 1c. Repository metadata
+git log --oneline -10          # commit history and style
+git status --short             # untracked / modified / deleted files
+git branch --show-current      # current working branch
 ```
 
-Read the full output. Do not skip or truncate the diff.
+Read the complete diff output without truncation.
 
 ---
 
 ### Step 2 — Analyze Changes
 
-Group changes by **functional domain**, not by directory structure. Each group
-becomes one `###` section in the commit body.
+Group code changes by **functional domain** (not by folder layout).
 
-Guiding questions:
-- What changed **behaviorally** (not just textually)?
-- Are any changes **breaking** or **deprecating** something?
-- Are there **database schema / migration** changes?
-- What **side-effects** need to be tested?
+Analysis checklist:
+- Behavioral shifts vs purely textual changes.
+- Breaking changes, deprecations, or contract modifications.
+- Database migrations, schema adjustments, or environment variables.
+- External side-effects requiring verification.
+
+---
+
+### Step 2.5 — Mode Selection: Repo Pribadi vs. Repo Utama
+
+> [!IMPORTANT]
+> **2 ATURAN BAKU PEMILIHAN MODE COMMIT:**
+>
+> 1. **Aturan 1 / Mode 1: Commit ke Repo Pribadi (DEFAULT — Poin-Poin Sederhana):**
+>    - Berlaku jika pengguna meminta commit biasa, misalnya hanya mengetik `/commit`, "commit", "commit message", "buatkan commit", atau commit di branch pribadi/fitur sendiri **TANPA** menyebutkan bahwa commit ini untuk PR ke repo utama.
+>    - **Format yang DIBERIKAN:** Pesan commit **ringkas dengan poin-poin sederhana (bullet points)** seperti sebelumnya.
+>    - **DILARANG** memberikan format PR-style yang panjang pada mode ini.
+>
+> 2. **Aturan 2 / Mode 2: Commit ke Repo Utama (HANYA JIKA DIMINTA EKSPLISIT UNTUK PR REPO UTAMA):**
+>    - Berlaku **HANYA JIKA** pengguna meminta `/commit` **DAN secara eksplisit menjelaskan** bahwa commit / deskripsi ini ditujukan untuk **Pull Request (PR) ke repositori utama (upstream / main repo)**!
+>    - **Format yang DIBERIKAN:** Format PR-style komprehensif panjang (Ringkasan Perubahan, Breakdown per Domain Teknis, Cara Pengetesan, Berkas yang Diperbarui, dan Pengujian).
+>    - **ATURAN TAMPILAN CHAT:** Tampilkan teks deskripsi PR **langsung sebagai teks Markdown rapi**. **DILARANG KERAS** membungkus teks deskripsi PR ke dalam card / satu blok kode raksasa (` ``` `) yang memunculkan copy button bertingkat di UI chat.
+>
 
 ---
 
 ### Step 3 — Determine the Commit Title
 
-Required format (Conventional Commits):
+Format (Conventional Commits):
 
 ```
 <type>(<scope>): <short description, max 72 chars>
 ```
 
-**Allowed types:**
-
-| Type       | When to Use                                                    |
-|------------|----------------------------------------------------------------|
-| `feat`     | New user-facing feature                                        |
-| `fix`      | Bug fix                                                        |
-| `refactor` | Restructuring without behavior change                          |
-| `perf`     | Performance improvement                                        |
-| `style`    | Formatting, whitespace — no logic change                       |
-| `test`     | Adding or updating unit / integration tests                    |
-| `docs`     | Documentation only                                             |
-| `chore`    | Configuration, tooling, CI/CD, dependency updates              |
-| `build`    | Build system or external dependency changes                    |
-| `ci`       | CI/CD pipeline changes                                         |
-| `revert`   | Reverts a previous commit                                      |
-
-**Scope rules:**
-- Use the module or feature name being changed (e.g., `ticket-it`,
-  `kartu-stok`, `central-stock`, `auth`).
-- If changes span > 3 unrelated modules, use `core` or omit the scope.
-- When multiple types apply, pick the highest business-value type:
-  `feat` > `fix` > `refactor` > everything else.
-
-**Title must NOT:**
-- End with a period.
-- Use vague verbs like "update", "change", or "modify" without specific context.
-- Exceed 72 characters.
+- **Bahasa Title:** Gunakan Bahasa Inggris secara default, atau Bahasa Indonesia jika pengguna meminta judul bahasa Indonesia secara eksplisit.
+- **Allowed Types:** `feat`, `fix`, `refactor`, `perf`, `style`, `test`, `docs`, `chore`, `build`, `ci`, `revert`.
+- **Scope Rules:** Gunakan nama komponen/modul yang terdampak (e.g., `auth`, `doorprize-tv`, `api`). Jika lebih dari 3 modul, gunakan `core` atau hilangkan scope.
+- Jangan akhiri title dengan tanda titik. Maksimal 72 karakter.
 
 ---
 
-### Step 4 — Build the Commit Body (PR-Style)
+### Step 4 — Build the Commit Body
 
-Use the template below. Fill each section based on the analysis. Remove any
-section that is entirely irrelevant — do not leave it empty.
+Berdasarkan hasil seleksi pada **Step 2.5**:
 
-```markdown
+---
+
+#### 🟢 FORMAT ATURAN 1: Commit ke Repo Pribadi (DEFAULT — Poin-poin Sederhana)
+
+Gunakan format ini untuk setiap permintaan commit biasa ke repo pribadi / branch fitur sendiri:
+
+```text
+<type>(<scope>): <deskripsi singkat>
+
+- <Poin ringkas perubahan 1>
+- <Poin ringkas perubahan 2>
+- <Poin ringkas perubahan 3>
+
+Assisted-By: Google Antigravity
+```
+
+---
+
+#### 🔵 FORMAT ATURAN 2: Commit ke Repo Utama (HANYA Jika Diminta Eksplisit untuk PR ke Repo Utama)
+
+Gunakan format ini **hanya jika** pengguna secara spesifik meminta deskripsi / commit untuk PR ke repo utama.
+
+##### Template PR Option A: Bahasa Indonesia
+
 ## Ringkasan Perubahan
 
-<one paragraph, 3–6 sentences explaining WHY this change was made and its
-primary business/technical impact. Do not repeat what the ### sections cover.>
+<Satu paragraf, 3–6 kalimat yang menjelaskan MENGAPA perubahan dilakukan, konteks arsitektur, dan dampak teknis/bisnisnya. Jangan mengulang poin-poin yang sudah dirinci di bawah.>
 
 ---
 
-### <Number>. <Domain/Feature Name> (<main files>)
+### 1. <Nama Domain/Fitur> (<berkas utama>)
 
-• **<Component/Class/Method>**: <explanation of change and technical reason>.
-• **<Component>**: <explanation>.
-[repeat per changed component within this domain]
-
-[repeat ### section for each functional domain]
+• **<Komponen/Class/Fungsi>**: <penjelasan teknis dan alasan perubahan>.
+• **<Komponen>**: <penjelasan teknis dan alasan perubahan>.
 
 ---
 
 ## Cara Pengetesan
 
-<numbered steps for manual testing, detailed enough for a reviewer who has not
-read the code. Include URLs, menu paths, or CLI commands where relevant.>
+<Langkah-langkah bernomor untuk reproduksi atau pengujian manual/otomatis. Sertakan perintah CLI, rute URL, atau alur pengujian terkait.>
 
 ---
 
-## Berkas yang Diperbarui (<count> Berkas)
+## Berkas yang Diperbarui (<jumlah> Berkas)
 
-<bullet list of file paths relative to repo root, sorted alphabetically by
-directory>
+<Daftar bullet path berkas relatif terhadap root repositori, diurutkan alfabetis>
 
 ---
 
 ## Pengujian (Testing Done)
 
-[✓] <test type>: <result summary>
-[✗] <test not yet run> — <reason / TODO>
-```
+[✓] <jenis pengujian / verifikasi yang dijalankan>: <ringkasan hasil>
+[✗] <pengujian tertunda / belum dijalankan> — <alasan / pemblokir>
+
+Assisted-By: Google Antigravity
+
+##### Template PR Option B: English
+
+## Summary of Changes
+
+<One paragraph, 3–6 sentences explaining WHY the changes were made, architectural context, and business/technical impact. Do not repeat verbatim line items from the detailed sections below.>
+
+---
+
+### 1. <Domain/Feature Name> (<primary files>)
+
+• **<Component/Class/Function>**: <technical reason and nature of the change>.
+• **<Component>**: <technical reason and nature of the change>.
+
+---
+
+## Testing Instructions
+
+<Numbered steps for manual or automated reproduction and verification. Include specific CLI commands, routes, URLs, or test suites.>
+
+---
+
+## Modified Files (<count> Files)
+
+<Bullet list of repo-relative file paths, sorted alphabetically>
+
+---
+
+## Test Verification
+
+[✓] <test suite / manual verification executed>: <summary of result>
+[✗] <pending verification> — <reason / blocker>
+
+Assisted-By: Google Antigravity
 
 ---
 
 ### Step 5 — Add Trailers
 
-Always append the following trailer at the **end of the body**, separated by
-one blank line from the last content line:
+Append the AI attribution trailer to the end of the commit body, separated by an empty line:
 
 ```
-Co-Authored-By: Google Antigravity <antigravity@google.com>
+Assisted-By: Google Antigravity
 ```
 
-If additional human co-authors are identified from `git log`, add them too:
+If authentic human co-authors are explicitly identified from repository collaboration, append:
 
 ```
 Co-Authored-By: Full Name <email@domain.com>
 ```
 
----
-
-### Step 6 — Preview then Commit
-
-**Default: preview mode — output the message first, do not commit immediately.**
-
-Output the full message (title + body + trailers) directly into chat with no
-wrapper or extra annotation. The user can read, copy, or request edits before
-proceeding.
-
-After displaying the preview, offer three options:
-1. Run `git commit` immediately using that message.
-2. Edit a specific section the user requests.
-3. Save to `.commit-msg` at the repo root.
-
-If the user confirms the commit, write the message to `.commit-msg` using
-`write_to_file`, run `git commit -F .commit-msg`, then delete `.commit-msg`.
+Do not use `Co-Authored-By` for AI agents to prevent ghost collaborator linking on GitHub.
 
 ---
 
-## Additional Rules
+### Step 6 — Preview and Execute
 
-### Language
-- **Title**: English (Conventional Commits is an international standard).
-- **Body**: Bahasa Indonesia. Technical names (class, method, variable, file
-  path) remain in their original form.
-
-### Length & Density
-- Title: max 72 characters.
-- Each body bullet: max 2 lines wrapped at 100 characters.
-- `Ringkasan Perubahan` section: 3–6 sentences, not bullet points.
-
-### Information Quality
-- Use **concrete names**: method names, class names, routes, column names —
-  never "some functions" or "several components".
-- For each technical change, explain **why**, not just **what**.
-- Avoid filler words in the body: "berhasil", "dengan baik", "sudah", "telah",
-  "sekarang".
-
-### Multi-Commit (Squash Candidates)
-If the diff exceeds 500 lines AND spans truly independent domains (e.g.,
-database migration + new UI feature + auth hotfix), recommend splitting into
-separate commits. Present a split plan before drafting each message.
+1. **Display Preview**: Tampilkan pesan commit di chat (dalam format poin-poin jika Mode Standar, atau teks Markdown PR langsung jika Mode PR).
+2. **Options**:
+   - Confirm and commit: Tulis pesan ke `.commit-msg`, jalankan `git commit -F .commit-msg` (atau `git commit -m "..."`), lalu hapus `.commit-msg`.
+   - Modify message: Sesuaikan bagian tertentu atas permintaan pengguna.
+   - Save to file only: Simpan ke `.commit-msg` tanpa commit.
 
 ---
+
+## Formatting and Quality Standards
+
+- **Tone**: Direct, technical, and objective. Avoid filler words ("berhasil", "dengan baik", "successfully", "properly").
+- **Precision**: Reference exact symbol names, routes, configurations, and filenames.
+- **No Giant Code Enclosure in Chat for PRs**: Saat menyajikan deskripsi PR di chat, render langsung sebagai teks Markdown murni (bukan dibungkus blok ```markdown) agar mudah dibaca dan tidak merusak UI.

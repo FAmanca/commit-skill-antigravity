@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
 # =============================================================================
 # gen-commit-msg.sh
-# Helper script untuk skill `commit`.
-# Mengumpulkan seluruh konteks git yang dibutuhkan dan mencetaknya ke stdout
-# dalam format terstruktur yang mudah dibaca agen.
+# Git context collector script for `commit` and `commit-push` skills.
+# Collects repository state, branch information, status, and diffs.
 #
-# Penggunaan:
-#   bash .agents/skills/commit/scripts/gen-commit-msg.sh
-#   bash .agents/skills/commit/scripts/gen-commit-msg.sh --unstaged
+# Usage:
+#   bash gen-commit-msg.sh
+#   bash gen-commit-msg.sh --unstaged
 # =============================================================================
 
 set -euo pipefail
@@ -15,12 +14,12 @@ set -euo pipefail
 MODE="${1:-}"
 
 echo "========================================"
-echo "  COMMIT SKILL — CONTEXT COLLECTOR"
+echo "  GIT CONTEXT COLLECTOR"
 echo "========================================"
 echo ""
 
 # --- Branch ---
-echo "## BRANCH"
+echo "## CURRENT BRANCH"
 git branch --show-current 2>/dev/null || echo "(detached HEAD)"
 echo ""
 
@@ -29,9 +28,14 @@ echo "## STATUS"
 git status --short
 echo ""
 
-# --- Log historis ---
+# --- Recent Commit History ---
 echo "## RECENT COMMITS (last 10)"
 git log --oneline -10 2>/dev/null || echo "(no commits yet)"
+echo ""
+
+# --- Remotes ---
+echo "## REMOTES"
+git remote -v 2>/dev/null || echo "(no remotes configured)"
 echo ""
 
 # --- Diff ---
